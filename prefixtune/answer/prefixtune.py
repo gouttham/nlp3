@@ -142,7 +142,7 @@ class TableToText:
         # print(f"Type of model after PEFT: {type(model)}")
         # print out trainable params
         # print("trainable_parameters for PEFT")
-        model.print_trainable_parameters()
+        # model.print_trainable_parameters()
 
         # for name, param in model.named_parameters():
         #     if param.requires_grad:
