@@ -256,7 +256,7 @@ if __name__ == '__main__':
                             type=bool, default=5,
                             help="number of virtual prompt tokens for prefix tuning")
     argparser.add_argument("-p", "--prefixprojection", dest="prefixprojection",
-                            action="store_true", default=False,
+                            action="store_true", default=True,
                             help="whether to project the prefix embeddings")
     argparser.add_argument("-m", "--modelfile", dest="modelfile",
                             default=os.path.join('data', 'peft0'),
