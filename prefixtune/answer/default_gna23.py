@@ -86,9 +86,9 @@ class TableToText:
             defined using :param self.batchsize:.
         """
 
-        data_cache_dir = "./bin/"
+        data_cache_dir = "./bin/data/"
         if not os.path.exists(data_cache_dir):
-            os.mkdir(data_cache_dir)
+            os.makedirs(data_cache_dir)
 
         dataset = load_dataset(self.traindata,cache_dir=data_cache_dir)
         processed_datasets = dataset.map(
