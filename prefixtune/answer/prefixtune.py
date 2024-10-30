@@ -259,7 +259,7 @@ if __name__ == '__main__':
                             action="store_true", default=False,
                             help="whether to project the prefix embeddings")
     argparser.add_argument("-m", "--modelfile", dest="modelfile",
-                            default=os.path.join('data', 'peft'),
+                            default=os.path.join('data', 'peft8'),
                             help="filename without suffix for model files")
     argparser.add_argument("-s", "--modelsuffix", dest="modelsuffix", default='.pt',
                             help="filename suffix for model files")
@@ -301,7 +301,7 @@ if __name__ == '__main__':
     # when you have implemented prefix tuning then change this to False to train and/or
     # use your prefix tuned model
     model = None
-    if True:
+    if False:
         print(f"Loading the non-finetuned pre-trained model: {opts.basemodel}", file=sys.stderr)
         model = AutoModelForCausalLM.from_pretrained(opts.basemodel)
         model = model.to(device)
