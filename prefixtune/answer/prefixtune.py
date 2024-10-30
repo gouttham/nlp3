@@ -248,7 +248,7 @@ class TableToText:
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument("-i", "--inputfile", dest="inputfile",
-                            default=os.path.join('data', 'input', 'dev.txt'),
+                            default=os.path.join('../data', 'input', 'dev.txt'),
                              help="produce table to text output for these input tables")
     argparser.add_argument("-t", "--traindata", dest="traindata",
                             default='e2e_nlg_cleaned',
