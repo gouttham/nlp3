@@ -185,7 +185,6 @@ class TableToText:
             model.save_pretrained(savefile)
 
     def decode(self, model, inputfile):
-        print(inputfile)
         inputpath = Path(inputfile)
         assert inputpath.exists()
         with inputpath.open() as f:
