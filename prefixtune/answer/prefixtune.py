@@ -27,11 +27,12 @@ class TableToText:
             prefixprojection=False
         ):
         # the input sentences will be handled using this object, you do not need to manually encode input sentence words
-        custom_cache_dir = "./bin/"
-        if not os.path.exists(custom_cache_dir):
-            os.mkdir(custom_cache_dir)
+        # custom_cache_dir = "./bin/"
+        # if not os.path.exists(custom_cache_dir):
+        #     os.mkdir(custom_cache_dir)
 
-        self.tokenizer = AutoTokenizer.from_pretrained(basemodel,cache_dir=custom_cache_dir)
+        # self.tokenizer = AutoTokenizer.from_pretrained(basemodel,cache_dir=custom_cache_dir)
+        self.tokenizer = AutoTokenizer.from_pretrained(basemodel)
         self.tokenizer_pad_token_id = self.tokenizer.eos_token_id \
             if self.tokenizer.pad_token_id is None else self.tokenizer.pad_token_id
         self.traindata = traindata
@@ -86,11 +87,12 @@ class TableToText:
             defined using :param self.batchsize:.
         """
 
-        data_cache_dir = "./bin/data/"
-        if not os.path.exists(data_cache_dir):
-            os.makedirs(data_cache_dir)
+        # data_cache_dir = "./bin/data/"
+        # if not os.path.exists(data_cache_dir):
+            # os.makedirs(data_cache_dir)
 
-        dataset = load_dataset(self.traindata,cache_dir=data_cache_dir)
+        # dataset = load_dataset(self.traindata,cache_dir=data_cache_dir)
+        dataset = load_dataset(self.traindata)
         processed_datasets = dataset.map(
             self.preprocess_function,
             batched=True,
