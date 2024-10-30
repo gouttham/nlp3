@@ -240,7 +240,7 @@ class TableToText:
                 score = sequences_scores[idx].item()
                 generated_texts.append((generated_text, score))
             # Print all generated texts and their scores
-            print(f"Generated texts and scores: {generated_texts}")
+            # print(f"Generated texts and scores: {generated_texts}")
             # Choose the best generated text based on the highest score
             best_text = max(generated_texts, key=lambda x: x[1])[0]
             return best_text
