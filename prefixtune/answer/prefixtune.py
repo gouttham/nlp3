@@ -279,8 +279,8 @@ if __name__ == '__main__':
                             help="log file for debugging")
     opts = argparser.parse_args()
 
-    opts.modelfile = './data/peft'
-    opts.inputfile = '../data/input/dev.txt'
+    # opts.modelfile = './data/peft'
+    # opts.inputfile = '../data/input/dev.txt'
 
     if opts.logfile is not None:
         logging.basicConfig(filename=opts.logfile, filemode='w', level=logging.DEBUG)
