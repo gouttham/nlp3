@@ -92,7 +92,7 @@ class TableToText:
             # os.makedirs(data_cache_dir)
 
         # dataset = load_dataset(self.traindata,cache_dir=data_cache_dir)
-        dataset = load_dataset(self.traindata)
+        dataset = load_dataset(self.traindata,trust_remote_code=True)
         processed_datasets = dataset.map(
             self.preprocess_function,
             batched=True,
