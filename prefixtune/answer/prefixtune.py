@@ -259,7 +259,7 @@ if __name__ == '__main__':
                             action="store_true", default=False,
                             help="whether to project the prefix embeddings")
     argparser.add_argument("-m", "--modelfile", dest="modelfile",
-                            default=os.path.join('data', 'peft8'),
+                            default=os.path.join('data', 'peft'),
                             help="filename without suffix for model files")
     argparser.add_argument("-s", "--modelsuffix", dest="modelsuffix", default='.pt',
                             help="filename suffix for model files")
