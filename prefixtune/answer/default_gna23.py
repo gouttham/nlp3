@@ -27,7 +27,11 @@ class TableToText:
             prefixprojection=False
         ):
         # the input sentences will be handled using this object, you do not need to manually encode input sentence words
-        self.tokenizer = AutoTokenizer.from_pretrained(basemodel)
+        custom_cache_dir = "./bin/"
+        if not os.path.exists():
+            os.mkdir(custom_cache_dir)
+
+        self.tokenizer = AutoTokenizer.from_pretrained(basemodel,cache_dir=custom_cache_dir)
         self.tokenizer_pad_token_id = self.tokenizer.eos_token_id \
             if self.tokenizer.pad_token_id is None else self.tokenizer.pad_token_id
         self.traindata = traindata
