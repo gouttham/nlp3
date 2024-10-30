@@ -8,7 +8,7 @@
   "num_transformer_submodules": 1,
   "num_virtual_tokens": 5,
   "peft_type": "PREFIX_TUNING",
-  "prefix_projection": false,
+  "prefix_projection": true,
   "revision": null,
   "task_type": "CAUSAL_LM",
   "token_dim": 768
