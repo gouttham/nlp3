@@ -28,7 +28,7 @@ class TableToText:
         ):
         # the input sentences will be handled using this object, you do not need to manually encode input sentence words
         custom_cache_dir = "./bin/"
-        if not os.path.exists():
+        if not os.path.exists(custom_cache_dir):
             os.mkdir(custom_cache_dir)
 
         self.tokenizer = AutoTokenizer.from_pretrained(basemodel,cache_dir=custom_cache_dir)
