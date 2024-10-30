@@ -1,0 +1,15 @@
+{
+  "auto_mapping": null,
+  "base_model_name_or_path": "distilgpt2",
+  "encoder_hidden_size": 768,
+  "inference_mode": true,
+  "num_attention_heads": 12,
+  "num_layers": 6,
+  "num_transformer_submodules": 1,
+  "num_virtual_tokens": 5,
+  "peft_type": "PREFIX_TUNING",
+  "prefix_projection": false,
+  "revision": null,
+  "task_type": "CAUSAL_LM",
+  "token_dim": 768
+}
