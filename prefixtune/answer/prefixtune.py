@@ -134,19 +134,19 @@ class TableToText:
             prefix_projection=self.prefixprojection
         )
 
-        for name, param in model.named_parameters():
-            if param.requires_grad:
-                print(f"{name} - {param.shape}")
+        # for name, param in model.named_parameters():
+        #     if param.requires_grad:
+        #         print(f"{name} - {param.shape}")
 
         model = get_peft_model(model, peft_config)
-        print(f"Type of model after PEFT: {type(model)}")
+        # print(f"Type of model after PEFT: {type(model)}")
         # print out trainable params
-        print("trainable_parameters for PEFT")
+        # print("trainable_parameters for PEFT")
         model.print_trainable_parameters()
 
-        for name, param in model.named_parameters():
-            if param.requires_grad:
-                print(f"{name} - {param.shape}")
+        # for name, param in model.named_parameters():
+        #     if param.requires_grad:
+        #         print(f"{name} - {param.shape}")
 
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.lr)
         lr_scheduler = get_linear_schedule_with_warmup(
