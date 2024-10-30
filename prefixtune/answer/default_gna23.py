@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from peft import get_peft_model, PrefixTuningConfig
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+# export HF_HOME="/localscratch/gna23/nlp3/prefixtune/answer/"
 class TableToText:
 
     def __init__(
@@ -183,6 +183,7 @@ class TableToText:
             model.save_pretrained(savefile)
 
     def decode(self, model, inputfile):
+        print(inputfile)
         inputpath = Path(inputfile)
         assert inputpath.exists()
         with inputpath.open() as f:
