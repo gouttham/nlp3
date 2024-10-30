@@ -1,4 +1,6 @@
 import argparse, os, string, sys
+import logging
+
 import torch
 import sacrebleu
 from tqdm import tqdm
@@ -6,10 +8,10 @@ from pathlib import Path
 from transformers import AutoModelForCausalLM, AutoTokenizer, default_data_collator, get_linear_schedule_with_warmup
 from datasets import load_dataset
 from torch.utils.data import DataLoader
-# import peft
+from peft import get_peft_model, PrefixTuningConfig
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+# export HF_HOME="/localscratch/gna23/nlp3/prefixtune/answer/"
 class TableToText:
 
     def __init__(
@@ -25,7 +27,11 @@ class TableToText:
             prefixprojection=False
         ):
         # the input sentences will be handled using this object, you do not need to manually encode input sentence words
-        self.tokenizer = AutoTokenizer.from_pretrained(basemodel)
+        custom_cache_dir = "./bin/"
+        if not os.path.exists(custom_cache_dir):
+            os.mkdir(custom_cache_dir)
+
+        self.tokenizer = AutoTokenizer.from_pretrained(basemodel,cache_dir=custom_cache_dir)
         self.tokenizer_pad_token_id = self.tokenizer.eos_token_id \
             if self.tokenizer.pad_token_id is None else self.tokenizer.pad_token_id
         self.traindata = traindata
@@ -79,7 +85,12 @@ class TableToText:
           in :param splits: which can contain any subset of ("train", "validation", "test"). The dataloder batchsize will be
             defined using :param self.batchsize:.
         """
-        dataset = load_dataset(self.traindata)
+
+        data_cache_dir = "./bin/data/"
+        if not os.path.exists(data_cache_dir):
+            os.makedirs(data_cache_dir)
+
+        dataset = load_dataset(self.traindata,cache_dir=data_cache_dir)
         processed_datasets = dataset.map(
             self.preprocess_function,
             batched=True,
@@ -115,6 +126,26 @@ class TableToText:
         # which will take num_virtual_tokens which is set to self.virtualtokens and
         # prefix_projection which is set to self.prefixprojection
 
+        peft_config = PrefixTuningConfig(
+            task_type="CAUSAL_LM",
+            num_virtual_tokens=self.virtualtokens,
+            prefix_projection=self.prefixprojection
+        )
+
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                print(f"{name} - {param.shape}")
+
+        model = get_peft_model(model, peft_config)
+        print(f"Type of model after PEFT: {type(model)}")
+        # print out trainable params
+        print("trainable_parameters for PEFT")
+        model.print_trainable_parameters()
+
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                print(f"{name} - {param.shape}")
+
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.lr)
         lr_scheduler = get_linear_schedule_with_warmup(
             optimizer=optimizer,
@@ -126,6 +157,22 @@ class TableToText:
         for epoch in range(self.epochs):
             model.train()
 
+            epoch_loss = 0.0
+            progress_bar = tqdm(data_loaders["train"], desc=f"Epoch {epoch + 1}/{self.epochs}", unit="batch")
+            for step, batch in enumerate(progress_bar):
+                batch = {k: v.to(device) for k, v in batch.items()}
+                outputs = model(**batch)
+                loss = outputs.loss
+                loss.backward()
+
+                optimizer.step()
+                lr_scheduler.step()
+                optimizer.zero_grad()
+
+                epoch_loss += loss.item()
+                progress_bar.set_postfix(loss=epoch_loss / (step + 1))
+
+
             # TODO rest of the training steps for prefix tuning
 
             if epoch == self.epochs - 1:
@@ -136,6 +183,7 @@ class TableToText:
             model.save_pretrained(savefile)
 
     def decode(self, model, inputfile):
+        print(inputfile)
         inputpath = Path(inputfile)
         assert inputpath.exists()
         with inputpath.open() as f:
@@ -150,8 +198,11 @@ class TableToText:
         return decoder_output
 
     def predict(self, model, src, num_sequences=1):
+        # num_sequences = 5
+        input_text = f"{self.prompt}{src} {self.tokenizer.bos_token} "
         inputs = self.tokenizer(self.prompt + src + ' ' + self.tokenizer.bos_token + ' ', return_tensors="pt")
         prediction = None
+        num_sequences = 5
         with torch.no_grad():
             inputs = {k: v.to(device) for k, v in inputs.items()}
             outputs = model.generate(
@@ -164,11 +215,33 @@ class TableToText:
                 num_beams=5,
                 top_p=0.9,
                 temperature=1.0,
-                num_return_sequences=num_sequences
+                num_return_sequences=num_sequences,
+                output_scores=True,
+                return_dict_in_generate=True
+
             )
             # TODO you may want to generate more than one sequence and choose the best one!
-            text = self.tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0]
-            return text.lstrip().replace(self.prompt + src, "").replace("\n", " ")
+            # text = self.tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0]
+            # return text.lstrip().replace(self.prompt + src, "").replace("\n", " ")
+            sequences = outputs.sequences
+            sequences_scores = outputs.sequences_scores  # Tensor of shape (num_sequences,)
+            texts = self.tokenizer.batch_decode(sequences, skip_special_tokens=True)
+            generated_texts = []
+            for idx, text in enumerate(texts):
+                # Remove the input prompt and table from the generated text
+                input_text = input_text.replace(self.tokenizer.bos_token,"")
+
+                generated_text = text[len(input_text):] if text.startswith(input_text) else text
+                generated_text = generated_text.lstrip().replace(self.prompt + src, "").replace("\n", " ")
+
+                generated_text = generated_text.strip().replace("\n", " ")
+                score = sequences_scores[idx].item()
+                generated_texts.append((generated_text, score))
+            # Print all generated texts and their scores
+            print(f"Generated texts and scores: {generated_texts}")
+            # Choose the best generated text based on the highest score
+            best_text = max(generated_texts, key=lambda x: x[1])[0]
+            return best_text
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
@@ -203,6 +276,10 @@ if __name__ == '__main__':
     argparser.add_argument("-l", "--logfile", dest="logfile", default=None,
                             help="log file for debugging")
     opts = argparser.parse_args()
+
+    opts.modelfile = './data/peft'
+    opts.inputfile = '../data/input/dev.txt'
+
     if opts.logfile is not None:
         logging.basicConfig(filename=opts.logfile, filemode='w', level=logging.DEBUG)
     modelfile = opts.modelfile
@@ -220,10 +297,10 @@ if __name__ == '__main__':
                         prefixprojection=opts.prefixprojection
                     )
     # TODO default.py always uses a prompt to produce output from the pretrained model
-    # when you have implemented prefix tuning then change this to False to train and/or 
+    # when you have implemented prefix tuning then change this to False to train and/or
     # use your prefix tuned model
     model = None
-    if True:
+    if False:
         print(f"Loading the non-finetuned pre-trained model: {opts.basemodel}", file=sys.stderr)
         model = AutoModelForCausalLM.from_pretrained(opts.basemodel)
         model = model.to(device)
