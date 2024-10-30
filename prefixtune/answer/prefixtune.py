@@ -8,7 +8,7 @@ from pathlib import Path
 from transformers import AutoModelForCausalLM, AutoTokenizer, default_data_collator, get_linear_schedule_with_warmup
 from datasets import load_dataset
 from torch.utils.data import DataLoader
-from peft import get_peft_model, PrefixTuningConfig
+from peft import PeftModel,get_peft_model, PrefixTuningConfig
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # export HF_HOME="/localscratch/gna23/nlp3/prefixtune/answer/"
@@ -259,7 +259,7 @@ if __name__ == '__main__':
                             action="store_true", default=True,
                             help="whether to project the prefix embeddings")
     argparser.add_argument("-m", "--modelfile", dest="modelfile",
-                            default=os.path.join('data', 'peft'),
+                            default=os.path.join('data', 'peft08'),
                             help="filename without suffix for model files")
     argparser.add_argument("-s", "--modelsuffix", dest="modelsuffix", default='.pt',
                             help="filename suffix for model files")
@@ -313,9 +313,10 @@ if __name__ == '__main__':
         # use the model file if available and opts.force is False
         assert(os.path.isdir(modelfile + opts.modelsuffix))
         print(f"Found modelfile {modelfile + opts.modelsuffix}. Starting decoding.", file=sys.stderr)
+
         model = AutoModelForCausalLM.from_pretrained(opts.basemodel)
         # TODO: if using hf peft library for prefix tuning:
-        # model = PeftModel.from_pretrained(model, modelfile + opts.modelsuffix)
+        model = PeftModel.from_pretrained(model, modelfile + opts.modelsuffix)
         model = model.to(device)
     if model:
         decoder_output = table_to_text.decode(model, opts.inputfile)
