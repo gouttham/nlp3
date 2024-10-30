@@ -85,7 +85,12 @@ class TableToText:
           in :param splits: which can contain any subset of ("train", "validation", "test"). The dataloder batchsize will be
             defined using :param self.batchsize:.
         """
-        dataset = load_dataset(self.traindata)
+
+        data_cache_dir = "./bin/"
+        if not os.path.exists(data_cache_dir):
+            os.mkdir(data_cache_dir)
+
+        dataset = load_dataset(self.traindata,cache_dir=data_cache_dir)
         processed_datasets = dataset.map(
             self.preprocess_function,
             batched=True,
