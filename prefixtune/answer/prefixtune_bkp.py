@@ -1,4 +1,6 @@
 import argparse, os, string, sys
+import logging
+
 import torch
 import sacrebleu
 from tqdm import tqdm
@@ -9,7 +11,7 @@ from torch.utils.data import DataLoader
 from peft import PeftModel,get_peft_model, PrefixTuningConfig
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+# export HF_HOME="/localscratch/gna23/nlp3/prefixtune/answer/"
 class TableToText:
 
     def __init__(
@@ -22,9 +24,14 @@ class TableToText:
             batchsize=4,
             lr=5e-5,
             virtualtokens=5,
-            prefixprojection=False
+            prefixprojection=True
         ):
         # the input sentences will be handled using this object, you do not need to manually encode input sentence words
+        # custom_cache_dir = "./bin/"
+        # if not os.path.exists(custom_cache_dir):
+        #     os.mkdir(custom_cache_dir)
+
+        # self.tokenizer = AutoTokenizer.from_pretrained(basemodel,cache_dir=custom_cache_dir)
         self.tokenizer = AutoTokenizer.from_pretrained(basemodel)
         self.tokenizer_pad_token_id = self.tokenizer.eos_token_id \
             if self.tokenizer.pad_token_id is None else self.tokenizer.pad_token_id
@@ -79,7 +86,13 @@ class TableToText:
           in :param splits: which can contain any subset of ("train", "validation", "test"). The dataloder batchsize will be
             defined using :param self.batchsize:.
         """
-        dataset = load_dataset(self.traindata)
+
+        # data_cache_dir = "./bin/data/"
+        # if not os.path.exists(data_cache_dir):
+            # os.makedirs(data_cache_dir)
+
+        # dataset = load_dataset(self.traindata,cache_dir=data_cache_dir)
+        dataset = load_dataset(self.traindata,trust_remote_code=True)
         processed_datasets = dataset.map(
             self.preprocess_function,
             batched=True,
@@ -120,7 +133,20 @@ class TableToText:
             num_virtual_tokens=self.virtualtokens,
             prefix_projection=self.prefixprojection
         )
+
+        # for name, param in model.named_parameters():
+        #     if param.requires_grad:
+        #         print(f"{name} - {param.shape}")
+
         model = get_peft_model(model, peft_config)
+        # print(f"Type of model after PEFT: {type(model)}")
+        # print out trainable params
+        # print("trainable_parameters for PEFT")
+        # model.print_trainable_parameters()
+
+        # for name, param in model.named_parameters():
+        #     if param.requires_grad:
+        #         print(f"{name} - {param.shape}")
 
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.lr)
         lr_scheduler = get_linear_schedule_with_warmup(
@@ -133,10 +159,9 @@ class TableToText:
         for epoch in range(self.epochs):
             model.train()
 
-            # TODO rest of the training steps for prefix tuning
             epoch_loss = 0.0
-            train_data_loader = data_loaders["train"]
-            for step, batch in enumerate(train_data_loader):
+            progress_bar = tqdm(data_loaders["train"], desc=f"Epoch {epoch + 1}/{self.epochs}", unit="batch")
+            for step, batch in enumerate(progress_bar):
                 batch = {k: v.to(device) for k, v in batch.items()}
                 outputs = model(**batch)
                 loss = outputs.loss
@@ -147,7 +172,10 @@ class TableToText:
                 optimizer.zero_grad()
 
                 epoch_loss += loss.item()
+                progress_bar.set_postfix(loss=epoch_loss / (step + 1))
 
+
+            # TODO rest of the training steps for prefix tuning
 
             if epoch == self.epochs - 1:
                 epoch_str = '' # last epoch so do not use epoch number in model filename
@@ -171,8 +199,11 @@ class TableToText:
         return decoder_output
 
     def predict(self, model, src, num_sequences=1):
+        # num_sequences = 5
+        input_text = f"{self.prompt}{src} {self.tokenizer.bos_token} "
         inputs = self.tokenizer(self.prompt + src + ' ' + self.tokenizer.bos_token + ' ', return_tensors="pt")
         prediction = None
+        # num_sequences = 5
         with torch.no_grad():
             inputs = {k: v.to(device) for k, v in inputs.items()}
             outputs = model.generate(
@@ -185,16 +216,40 @@ class TableToText:
                 num_beams=5,
                 top_p=0.9,
                 temperature=1.0,
-                num_return_sequences=num_sequences
+                # repetition_penality=1.2,
+                no_repeat_ngram_size=3,
+                num_return_sequences=num_sequences,
+                output_scores=True,
+                return_dict_in_generate=True
+
             )
             # TODO you may want to generate more than one sequence and choose the best one!
-            text = self.tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0]
-            return text.lstrip().replace(self.prompt + src, "").replace("\n", " ")
+            # text = self.tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0]
+            # return text.lstrip().replace(self.prompt + src, "").replace("\n", " ")
+            sequences = outputs.sequences
+            sequences_scores = outputs.sequences_scores  # Tensor of shape (num_sequences,)
+            texts = self.tokenizer.batch_decode(sequences, skip_special_tokens=True)
+            generated_texts = []
+            for idx, text in enumerate(texts):
+                # Remove the input prompt and table from the generated text
+                input_text = input_text.replace(self.tokenizer.bos_token,"")
+
+                generated_text = text[len(input_text):] if text.startswith(input_text) else text
+                generated_text = generated_text.lstrip().replace(self.prompt + src, "").replace("\n", " ")
+
+                generated_text = generated_text.strip().replace("\n", " ")
+                score = sequences_scores[idx].item()
+                generated_texts.append((generated_text, score))
+            # Print all generated texts and their scores
+            # print(f"Generated texts and scores: {generated_texts}")
+            # Choose the best generated text based on the highest score
+            best_text = max(generated_texts, key=lambda x: x[1])[0]
+            return best_text
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument("-i", "--inputfile", dest="inputfile",
-                            default=os.path.join('data', 'input', 'dev.txt'),
+                            default=os.path.join('../data', 'input', 'dev.txt'),
                              help="produce table to text output for these input tables")
     argparser.add_argument("-t", "--traindata", dest="traindata",
                             default='e2e_nlg_cleaned',
@@ -206,7 +261,7 @@ if __name__ == '__main__':
                             action="store_true", default=True,
                             help="whether to project the prefix embeddings")
     argparser.add_argument("-m", "--modelfile", dest="modelfile",
-                            default=os.path.join('data', 'peft'),
+                            default=os.path.join('data', 'peft3'),
                             help="filename without suffix for model files")
     argparser.add_argument("-s", "--modelsuffix", dest="modelsuffix", default='.pt',
                             help="filename suffix for model files")
@@ -224,6 +279,10 @@ if __name__ == '__main__':
     argparser.add_argument("-l", "--logfile", dest="logfile", default=None,
                             help="log file for debugging")
     opts = argparser.parse_args()
+
+    # opts.modelfile = './data/peft'
+    # opts.inputfile = '../data/input/dev.txt'
+
     if opts.logfile is not None:
         logging.basicConfig(filename=opts.logfile, filemode='w', level=logging.DEBUG)
     modelfile = opts.modelfile
@@ -244,7 +303,7 @@ if __name__ == '__main__':
     # when you have implemented prefix tuning then change this to False to train and/or
     # use your prefix tuned model
     model = None
-    if True:
+    if False:
         print(f"Loading the non-finetuned pre-trained model: {opts.basemodel}", file=sys.stderr)
         model = AutoModelForCausalLM.from_pretrained(opts.basemodel)
         model = model.to(device)
@@ -256,6 +315,7 @@ if __name__ == '__main__':
         # use the model file if available and opts.force is False
         assert(os.path.isdir(modelfile + opts.modelsuffix))
         print(f"Found modelfile {modelfile + opts.modelsuffix}. Starting decoding.", file=sys.stderr)
+
         model = AutoModelForCausalLM.from_pretrained(opts.basemodel)
         # TODO: if using hf peft library for prefix tuning:
         model = PeftModel.from_pretrained(model, modelfile + opts.modelsuffix)
