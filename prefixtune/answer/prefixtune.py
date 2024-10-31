@@ -176,6 +176,7 @@ class TableToText:
         return decoder_output
 
     def predict(self, model, src, num_sequences=1):
+        print("num_sequences : ", num_sequences)
         input_text = self.prompt + src + ' ' + self.tokenizer.bos_token + ' '
         inputs = self.tokenizer(input_text, return_tensors="pt")
         prediction = None
