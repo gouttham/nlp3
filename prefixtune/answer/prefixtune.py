@@ -136,7 +136,8 @@ class TableToText:
             # TODO rest of the training steps for prefix tuning
             epoch_loss = 0.0
             train_data_loader = data_loaders["train"]
-            for step, batch in enumerate(train_data_loader):
+            progress_bar = tqdm(data_loaders["train"], desc=f"Epoch {epoch + 1}/{self.epochs}", unit="batch")
+            for step, batch in enumerate(progress_bar):
                 batch = {k: v.to(device) for k, v in batch.items()}
                 outputs = model(**batch)
                 loss = outputs.loss
@@ -147,6 +148,8 @@ class TableToText:
                 optimizer.zero_grad()
 
                 epoch_loss += loss.item()
+                progress_bar.set_postfix(loss=epoch_loss / (step + 1))
+
 
 
             if epoch == self.epochs - 1:
