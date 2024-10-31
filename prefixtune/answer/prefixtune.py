@@ -203,7 +203,7 @@ class TableToText:
             # text = text[0]
 
             # select based on length
-            text = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
+            text = self.tokenizer.batch_decode(outputs.sequences, skip_special_tokens=True)
             text = max(text, key=lambda i: len(i.split(' ')))
 
             input_text = input_text.replace(self.tokenizer.bos_token, "")
