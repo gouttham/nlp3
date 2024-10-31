@@ -244,7 +244,7 @@ if __name__ == '__main__':
     # when you have implemented prefix tuning then change this to False to train and/or
     # use your prefix tuned model
     model = None
-    if True:
+    if False:
         print(f"Loading the non-finetuned pre-trained model: {opts.basemodel}", file=sys.stderr)
         model = AutoModelForCausalLM.from_pretrained(opts.basemodel)
         model = model.to(device)
