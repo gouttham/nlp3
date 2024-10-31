@@ -216,7 +216,7 @@ class TableToText:
                 num_beams=5,
                 top_p=0.95,
                 temperature=0.7,
-                repetition_penality=1.2,
+                # repetition_penality=1.2,
                 no_repeat_ngram_size=3,
                 num_return_sequences=num_sequences,
                 output_scores=True,
