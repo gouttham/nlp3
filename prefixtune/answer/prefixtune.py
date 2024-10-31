@@ -198,9 +198,14 @@ class TableToText:
             )
             # TODO you may want to generate more than one sequence and choose the best one!
 
-            text = self.tokenizer.batch_decode([outputs.sequences[torch.argmax(outputs.sequences_scores).item()]],
-                                          skip_special_tokens=True)
-            text = text[0]
+            # select based on score
+            # text = self.tokenizer.batch_decode([outputs.sequences[torch.argmax(outputs.sequences_scores).item()]], skip_special_tokens=True)
+            # text = text[0]
+
+            # select based on length
+            text = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
+            text = max(text, key=lambda i: len(i.split(' ')))
+
             input_text = input_text.replace(self.tokenizer.bos_token, "")
             text = text[len(input_text):] if text.startswith(input_text) else text
 
