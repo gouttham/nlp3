@@ -203,7 +203,7 @@ class TableToText:
         input_text = f"{self.prompt}{src} {self.tokenizer.bos_token} "
         inputs = self.tokenizer(self.prompt + src + ' ' + self.tokenizer.bos_token + ' ', return_tensors="pt")
         prediction = None
-        num_sequences = 5
+        # num_sequences = 5
         with torch.no_grad():
             inputs = {k: v.to(device) for k, v in inputs.items()}
             outputs = model.generate(
@@ -219,13 +219,13 @@ class TableToText:
                 # repetition_penality=1.2,
                 no_repeat_ngram_size=3,
                 num_return_sequences=num_sequences,
-                output_scores=True,
-                return_dict_in_generate=True
+                # output_scores=True,
+                # return_dict_in_generate=True
 
             )
             # TODO you may want to generate more than one sequence and choose the best one!
-            # text = self.tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0]
-            # return text.lstrip().replace(self.prompt + src, "").replace("\n", " ")
+            text = self.tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0]
+            return text.lstrip().replace(self.prompt + src, "").replace("\n", " ")
             sequences = outputs.sequences
             sequences_scores = outputs.sequences_scores  # Tensor of shape (num_sequences,)
             texts = self.tokenizer.batch_decode(sequences, skip_special_tokens=True)
