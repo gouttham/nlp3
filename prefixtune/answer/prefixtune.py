@@ -24,7 +24,7 @@ class TableToText:
             batchsize=4,
             lr=5e-5,
             virtualtokens=5,
-            prefixprojection=False
+            prefixprojection=True
         ):
         # the input sentences will be handled using this object, you do not need to manually encode input sentence words
         # custom_cache_dir = "./bin/"
@@ -214,8 +214,10 @@ class TableToText:
                 pad_token_id=self.tokenizer_pad_token_id,
                 do_sample=True,
                 num_beams=5,
-                top_p=0.9,
-                temperature=1.0,
+                top_p=0.95,
+                temperature=0.7,
+                repetition_penality=1.2,
+                no_repeat_ngram_size=3,
                 num_return_sequences=num_sequences,
                 output_scores=True,
                 return_dict_in_generate=True
