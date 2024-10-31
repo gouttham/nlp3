@@ -176,7 +176,8 @@ class TableToText:
         return decoder_output
 
     def predict(self, model, src, num_sequences=1):
-        inputs = self.tokenizer(self.prompt + src + ' ' + self.tokenizer.bos_token + ' ', return_tensors="pt")
+        input_text = self.prompt + src + ' ' + self.tokenizer.bos_token + ' '
+        inputs = self.tokenizer(input_text, return_tensors="pt")
         prediction = None
         with torch.no_grad():
             inputs = {k: v.to(device) for k, v in inputs.items()}
@@ -192,9 +193,18 @@ class TableToText:
                 temperature=1.0,
                 num_return_sequences=num_sequences,
                 no_repeat_ngram_size = 3,
+                output_scores=True,
+                return_dict_in_generate=True
             )
             # TODO you may want to generate more than one sequence and choose the best one!
-            text = self.tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0]
+
+            text = self.tokenizer.batch_decode([outputs.sequences[torch.argmax(outputs.sequences_scores).item()]],
+                                          skip_special_tokens=True)
+            text = text[0]
+            input_text = input_text.replace(self.tokenizer.bos_token, "")
+            text = text[len(input_text):] if text.startswith(input_text) else text
+
+            # text = self.tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0]
             return text.lstrip().replace(self.prompt + src, "").replace("\n", " ")
 
 if __name__ == '__main__':
