@@ -1,4 +1,6 @@
 import argparse, os, string, sys
+import logging
+
 import torch
 import sacrebleu
 from tqdm import tqdm
@@ -188,7 +190,8 @@ class TableToText:
                 num_beams=5,
                 top_p=0.9,
                 temperature=1.0,
-                num_return_sequences=num_sequences
+                num_return_sequences=num_sequences,
+                no_repeat_ngram_size = 3,
             )
             # TODO you may want to generate more than one sequence and choose the best one!
             text = self.tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0]
