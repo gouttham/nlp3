@@ -168,7 +168,7 @@ class TableToText:
             lines = [line for line in f.read().splitlines() if len(line) > 0 and not line.isspace()]
             decoder_output = []
             for i, src in tqdm(enumerate(lines)):
-                predicted_line = self.predict(model, src, num_sequences=5)
+                predicted_line = self.predict(model, src, num_sequences=1)
                 #if not predicted_line or src.split()[0] not in predicted_line.split():
                     # if output generation failed then use a heuristic to generate some output
                     #predicted_line = src.replace(':', '').replace('|', '').replace('  ', ' ')
@@ -203,13 +203,13 @@ class TableToText:
             # text = text[0]
 
             # select based on length
-            text = self.tokenizer.batch_decode(outputs.sequences, skip_special_tokens=True)
-            text = max(text, key=lambda i: len(i.split(' ')))
+            # text = self.tokenizer.batch_decode(outputs.sequences, skip_special_tokens=True)
+            # text = max(text, key=lambda i: len(i.split(' ')))
 
-            input_text = input_text.replace(self.tokenizer.bos_token, "")
-            text = text[len(input_text):] if text.startswith(input_text) else text
+            # input_text = input_text.replace(self.tokenizer.bos_token, "")
+            # text = text[len(input_text):] if text.startswith(input_text) else text
 
-            # text = self.tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0]
+            text = self.tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0]
             return text.lstrip().replace(self.prompt + src, "").replace("\n", " ")
 
 if __name__ == '__main__':
