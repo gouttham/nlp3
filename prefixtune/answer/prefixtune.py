@@ -209,7 +209,7 @@ class TableToText:
             # input_text = input_text.replace(self.tokenizer.bos_token, "")
             # text = text[len(input_text):] if text.startswith(input_text) else text
 
-            text = self.tokenizer.batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0]
+            text = self.tokenizer.batch_decode(outputs.sequences.detach().cpu().numpy(), skip_special_tokens=True)[0]
             return text.lstrip().replace(self.prompt + src, "").replace("\n", " ")
 
 if __name__ == '__main__':
